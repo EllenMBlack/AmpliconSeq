@@ -73,6 +73,7 @@ filter_alignment.py -o /Users/ellen/Desktop/IAAP/open_ref_otus/pynast_aligned_se
 make_phylogeny.py -i /Users/ellen/Desktop/IAAP/open_ref_otus/pynast_aligned_seqs/rep_set_aligned_pfiltered.fasta -o /Users/ellen/Desktop/IAAP/open_ref_otus/rep_set.tre 
 
 # STEP 2: PICRUST METAGENOME PREDICTION
+# PICRUST scripts can be found at picrust.github.io/picrust/scripts
 
 # OTUs narrowed down to those in the GreenGenes 16S rRNA reference sequences. This was essential since new OTUs were named in the "open_ref_otus" set and weren't 97% similar to reference sequences.
 filter_otus_from_otu_table.py -i /Users/ellen/Desktop/IAAP/open_ref_otus/otu_table_mc2.biom -o /Users/ellen/Desktop/IAAP/picrust/filteredotutable_97.biom
