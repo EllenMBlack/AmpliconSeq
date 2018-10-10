@@ -15,12 +15,23 @@ Sourcing MacQIIME environment variables...
   QIIME-related things in your PATH.
 
   Type "exit" (return) to go back to your normal shell
-
+  
+# join forward and reverse reads with illumina barcode file
 MacQIIME $ join_paired_ends.py -f /users/ellen/desktop/ellenqiime/r1.fastq -r /users/ellen/desktop/ellenqiime/r2.fastq -b /users/ellen/desktop/ellenqiime/i1.fastq -o /users/ellen/desktop/ellenqiime/fastq-join_joined
+
+# merge joined paired ends with user-provided metadata
 MacQIIME $ split_libraries_fastq.py -i/Users/ellen/Desktop/EllenQIIME/fastq-join_joined/fastqjoin.join.fastq -b /Users/ellen/Desktop/EllenQIIME/fastq-join_joined/fastqjoin.join_barcodes.fastq -m /Users/ellen/Desktop/EllenQIIME/Barcode_file.txt -o /Users/ellen/Desktop/EllenQIIME/slout --barcode_type 12
+
+# compare paired end reads to 16s rRNA reference database (GreenGenes) and use 97% similar OTUs
+# we chose to pick open reference otus to discover new OTUs that dont align to the reference sequences
 MacQIIME $ pick_open_reference_otus.py -o /Users/ellen/Desktop/EllenQIIME/open_refs_otus -i /Users/ellen/Desktop/EllenQIIME/slout/seqs.fna -r /Users/ellen/Desktop/EllenQIIME/gg_13_5.fasta -a -O 2 -f
+
+# filter OTUs with very low abundance
+# we chose a cutoff of 0.00005 relative abundance
 MacQIIME $ filter_otus_from_otu_table.py -i /users/ellen/desktop/ellenqiime/open_refs_otus/otu_table_mc2_w_tax_no_pynast_failures.biom -o /users/ellen/desktop/ellenqiime/open_refs_otus/otu_table_filtered.biom --min_count_fraction 0.00005
 
-
+# the core diversity analyses command provides alpha and beta diversities, graphs principle component analyses, OTU tables with relative abundance counts, and statistically significant differences with multiple test correction.
+# we used a cutoff of 6000 reads per sample to minimize skewing diversity metrices from sequencing errors
+# Statistical tests were performed in reference to our user-provided mapping file-treatments included Mussel presence,sediment Depth, Day of sample collection, and Growth condition for each sample
 MacQIIME $ core_diversity_analyses.py -i /users/ellen/desktop/ellenqiime/open_refs_otus/otu_table_filtered.biom -o /users/ellen/desktop/ellenqiime/diversity -m /users/ellen/desktop/ellenqiime/barcode_file.txt -e 6000 -c Mussel,Depth,Day,Growth -a -O 2 -t /users/ellen/desktop/ellenqiime/open_refs_otus/rep_set.tre
 
