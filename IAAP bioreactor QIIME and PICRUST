@@ -1,0 +1,94 @@
+# 30 Jul 2018
+# QIIME version: 1.9.1
+
+# Assuming MacQIIME scripts are environmental variables (see "AmpliconSeq" repository)
+
+
+# STEP 1: ASSIGN TAXONOMIC CLASSIFICATION TO OTUs
+
+# join forward and reverse reads with the illumina sequencing barcode file
+join_paired_ends.py -f /Users/ellen/Desktop/IAAP/r1.fastq -r /Users/ellen/Desktop/IAAP/r2.fastq -b /Users/ellen/Desktop/IAAP/i1.fastq -o /Users/ellen/Desktop/IAAP/fastq-join.joined
+
+# command to join the paired end fastq, corresponding barcodes, and user-provided metadata mapping file (optional)
+split_libraries_fastq.py -i /Users/ellen/Desktop/IAAP/fastq-join_joined/fastqjoin.join.fastq -b /Users/ellen/Desktop/IAAP/fastq-join_joined/fastqjoin.join.barcodes.fastq -m /Users/ellen/Desktop/IAAP/mapping_file.txt -o /Users/ellen/Desktop/IAAP/slout --barcode_type 12
+
+pick_otus_reference_seqs_fp	/macqiime/anaconda/lib/python2.7/site-packages/qiime_default_reference/gg_13_8_otus/rep_set/97_otus.fasta
+sc_queue	all.q
+pynast_template_alignment_fp	/macqiime/anaconda/lib/python2.7/site-packages/qiime_default_reference/gg_13_8_otus/rep_set_aligned/85_otus.pynast.fasta
+cluster_jobs_fp	start_parallel_jobs.py
+assign_taxonomy_reference_seqs_fp	/macqiime/anaconda/lib/python2.7/site-packages/qiime_default_reference/gg_13_8_otus/rep_set/97_otus.fasta
+torque_queue	friendlyq
+jobs_to_start	1
+denoiser_min_per_core	50
+assign_taxonomy_id_to_taxonomy_fp	/macqiime/anaconda/lib/python2.7/site-packages/qiime_default_reference/gg_13_8_otus/taxonomy/97_otu_taxonomy.txt
+temp_dir	/tmp/
+blastall_fp	blastall
+seconds_to_sleep	60
+parallel:jobs_to_start	4
+
+# Pick Reference OTUs command 
+parallel_pick_otus_uclust_ref.py -i /Users/ellen/Desktop/IAAP/raw/processed.fasta -o /Users/ellen/Desktop/IAAP/open_ref_otus/step1_otus -r /Users/ellen/Desktop/IAAP/gg_13_5_otus/rep_set/97_otus.fasta -T --jobs_to_start 4 
+
+# Generate full failures fasta file command 
+filter_fasta.py -f /Users/ellen/Desktop/IAAP/raw/processed.fasta -s /Users/ellen/Desktop/IAAP/open_ref_otus/step1_otus/processed_failures.txt -o /Users/ellen/Desktop/IAAP/open_ref_otus/step1_otus/failures.fasta
+
+# Pick rep set command 
+pick_rep_set.py -i /Users/ellen/Desktop/IAAP/open_ref_otus/step1_otus/processed_otus.txt -o /Users/ellen/Desktop/IAAP/open_ref_otus/step1_otus/step1_rep_set.fna -f /Users/ellen/Desktop/IAAP/raw/processed.fasta
+
+# Pick de novo OTUs on step1 failures command 
+pick_otus.py -i /Users/ellen/Desktop/IAAP/open_ref_otus/step1_otus/failures.fasta -o /Users/ellen/Desktop/IAAP/open_ref_otus/step4_otus/ -m uclust  --denovo_otu_id_prefix New.CleanUp.ReferenceOTU
+
+# Merge OTU maps command 
+cat /Users/ellen/Desktop/IAAP/open_ref_otus/step1_otus/processed_otus.txt  /Users/ellen/Desktop/IAAP/open_ref_otus/step4_otus//failures_otus.txt > /Users/ellen/Desktop/IAAP/open_ref_otus/final_otu_map.txt
+
+# Pick representative set for subsampled failures command 
+pick_rep_set.py -i /Users/ellen/Desktop/IAAP/open_ref_otus/step4_otus//failures_otus.txt -o /Users/ellen/Desktop/IAAP/open_ref_otus/step4_otus//step4_rep_set.fna -f /Users/ellen/Desktop/IAAP/open_ref_otus/step1_otus/failures.fasta
+
+# Filter singletons from the otu map using API 
+python -c "import qiime; qiime.filter.filter_otus_from_otu_map('/Users/ellen/Desktop/IAAP/open_ref_otus/final_otu_map.txt', '/Users/ellen/Desktop/IAAP/open_ref_otus/final_otu_map_mc2.txt', '2')"
+
+# Write non-singleton otus representative sequences from step1 to the final rep set file: /Users/ellen/Desktop/IAAP/open_ref_otus/rep_set.fna
+
+# Copy the full input refseqs file to the new refseq file
+cp /Users/ellen/Desktop/IAAP/gg_13_5_otus/rep_set/97_otus.fasta /Users/ellen/Desktop/IAAP/open_ref_otus/new_refseqs.fna
+
+# Write non-singleton otus representative sequences from step 4 to the final representative set and the new reference set (/Users/ellen/Desktop/IAAP/open_ref_otus/rep_set.fna and /Users/ellen/Desktop/IAAP/open_ref_otus/new_refseqs.fna respectively)
+
+# Make the otu table command 
+make_otu_table.py -i /Users/ellen/Desktop/IAAP/open_ref_otus/final_otu_map_mc2.txt -o /Users/ellen/Desktop/IAAP/open_ref_otus/otu_table_mc2.biom
+
+# Assign taxonomy command 
+parallel_assign_taxonomy_uclust.py -i /Users/ellen/Desktop/IAAP/open_ref_otus/rep_set.fna -o /Users/ellen/Desktop/IAAP/open_ref_otus/uclust_assigned_taxonomy -T --jobs_to_start 4 
+
+# Add taxa to OTU table command 
+biom add-metadata -i /Users/ellen/Desktop/IAAP/open_ref_otus/otu_table_mc2.biom --observation-metadata-fp /Users/ellen/Desktop/IAAP/open_ref_otus/uclust_assigned_taxonomy/rep_set_tax_assignments.txt -o /Users/ellen/Desktop/IAAP/open_ref_otus/otu_table_mc2_w_tax.biom --sc-separated taxonomy --observation-header OTUID,taxonomy
+
+# Align sequences command 
+parallel_align_seqs_pynast.py -i /Users/ellen/Desktop/IAAP/open_ref_otus/rep_set.fna -o /Users/ellen/Desktop/IAAP/open_ref_otus/pynast_aligned_seqs -T --jobs_to_start 4 
+
+# Filter alignment command 
+filter_alignment.py -o /Users/ellen/Desktop/IAAP/open_ref_otus/pynast_aligned_seqs -i /Users/ellen/Desktop/IAAP/open_ref_otus/pynast_aligned_seqs/rep_set_aligned.fasta 
+
+# Build phylogenetic tree command 
+make_phylogeny.py -i /Users/ellen/Desktop/IAAP/open_ref_otus/pynast_aligned_seqs/rep_set_aligned_pfiltered.fasta -o /Users/ellen/Desktop/IAAP/open_ref_otus/rep_set.tre 
+
+# STEP 2: PICRUST METAGENOME PREDICTION
+
+# OTUs narrowed down to those in the GreenGenes 16S rRNA reference sequences. This was essential since new OTUs were named in the "open_ref_otus" set and weren't 97% similar to reference sequences.
+filter_otus_from_otu_table.py -i /Users/ellen/Desktop/IAAP/open_ref_otus/otu_table_mc2.biom -o /Users/ellen/Desktop/IAAP/picrust/filteredotutable_97.biom
+
+# command to normalize OTU abundances by the 16S copy number
+normalize_by_copy_number.py -i /Users/ellen/Desktop/IAAP/picrust/filteredotutable_97.biom -o /Users/ellen/Desktop/IAAP/picrust/normalizedtable.biom
+
+# command to multiply the normalized OTU count by functional traits (KEGG Orthologs)
+predict_metagenomes.py -i /Users/ellen/Desktop/IAAP/picrust/normalizedtable.biom -o /Users/ellen/Desktop/IAAP/picrust/metagenome_predictions.biom --type_of_prediction ko
+
+# repeat previous command but produce tab delimited file
+predict_metagenomes.py -i /Users/ellen/Desktop/IAAP/picrust/normalizedtable.biom -o /Users/ellen/Desktop/IAAP/picrust/metagenome_predictions.tab --type_of_prediction ko --format_tab_delimited
+
+# command to place KO's from previous step into higher order categories of KEGG pathways
+categorize_by_function.py -i /Users/ellen/Desktop/IAAP/picrust/metagenome_prediction.biom -o /Users/ellen/Desktop/IAAP/picrust/metagenome_function.biom --format_tab_delimited
+
+# KO's and KEGG pathways traced back to original OTU and are reported with taxonomic origin
+metagenome_contributions.py -i/Users/ellen/Desktop/IAAP/picrust/metagenome_function.biom -o /Users/ellen/Desktop/IAAP/picrust/metagenome_contribution_KEGG.tab --format_tab_delimited
+metagenome_contributions.py -i/Users/ellen/Desktop/IAAP/picrust/metagenome_prediction.biom -o /Users/ellen/Desktop/IAAP/picrust/metagenome_contribution_KO.tab --format_tab_delimited
