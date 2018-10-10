@@ -1,6 +1,6 @@
 # 30 Jul 2018
 # QIIME version: 1.9.1
-
+#QIIME scripts originally from Werner lab (qiime.org)
 # Assuming MacQIIME scripts are environmental variables (see "AmpliconSeq/QIIME pipeline")
 
 
