@@ -1,7 +1,7 @@
 # 30 Jul 2018
 # QIIME version: 1.9.1
 
-# Assuming MacQIIME scripts are environmental variables (see "AmpliconSeq" repository)
+# Assuming MacQIIME scripts are environmental variables (see "AmpliconSeq/QIIME pipeline")
 
 
 # STEP 1: ASSIGN TAXONOMIC CLASSIFICATION TO OTUs
